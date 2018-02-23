@@ -22,6 +22,8 @@ import (
 	tm "github.com/nsf/termbox-go"
 )
 
+var done chan bool
+
 // Bufferer should be implemented by all renderable components.
 type Bufferer interface {
 	Buffer() Buffer
@@ -33,6 +35,7 @@ func Init() error {
 	if err := tm.Init(); err != nil {
 		return err
 	}
+	done = make(chan bool)
 
 	sysEvtChs = make([]chan Event, 0)
 	go hookTermboxEvt()
@@ -61,8 +64,13 @@ func Init() error {
 	DefaultEvtStream.Hook(DefaultWgtMgr.WgtHandlersHook())
 
 	go func() {
-		for bs := range renderJobs {
-			render(bs...)
+		for {
+			select {
+			case bs := <-renderJobs:
+				render(bs...)
+			case <-done:
+				return
+			}
 		}
 	}()
 
@@ -72,6 +80,7 @@ func Init() error {
 // Close finalizes termui library,
 // should be called after successful initialization when termui's functionality isn't required anymore.
 func Close() {
+	close(done)
 	tm.Close()
 }
 

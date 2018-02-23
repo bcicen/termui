@@ -123,12 +123,16 @@ type EvtErr error
 
 func hookTermboxEvt() {
 	for {
-		e := termbox.PollEvent()
-
-		for _, c := range sysEvtChs {
-			func(ch chan Event) {
-				ch <- crtTermboxEvt(e)
-			}(c)
+		select {
+		case <-done:
+			return
+		default:
+			e := termbox.PollEvent()
+			for _, c := range sysEvtChs {
+				func(ch chan Event) {
+					ch <- crtTermboxEvt(e)
+				}(c)
+			}
 		}
 	}
 }
