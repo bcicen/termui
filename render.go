@@ -5,24 +5,24 @@
 package termui
 
 import (
+	"bytes"
+	"context"
+	"fmt"
 	"image"
 	"io"
+	"os"
+	"runtime/debug"
 	"sync"
 	"time"
-
-	"fmt"
-
-	"os"
-
-	"runtime/debug"
-
-	"bytes"
 
 	"github.com/maruel/panicparse/stack"
 	tm "github.com/nsf/termbox-go"
 )
 
-var done chan bool
+var (
+	ctx    context.Context
+	cancel context.CancelFunc
+)
 
 // Bufferer should be implemented by all renderable components.
 type Bufferer interface {
@@ -35,7 +35,8 @@ func Init() error {
 	if err := tm.Init(); err != nil {
 		return err
 	}
-	done = make(chan bool)
+	pctx := context.Background()
+	ctx, cancel = context.WithCancel(pctx)
 
 	sysEvtChs = make([]chan Event, 0)
 	go hookTermboxEvt()
@@ -49,6 +50,7 @@ func Init() error {
 	Body.BgColor = ThemeAttr("bg")
 	Body.Width = TermWidth()
 
+	DefaultEvtStream = NewEvtStream()
 	DefaultEvtStream.Init()
 	DefaultEvtStream.Merge("termbox", NewSysEvtCh())
 	DefaultEvtStream.Merge("timer", NewTimerCh(time.Second))
@@ -68,7 +70,7 @@ func Init() error {
 			select {
 			case bs := <-renderJobs:
 				render(bs...)
-			case <-done:
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -80,7 +82,7 @@ func Init() error {
 // Close finalizes termui library,
 // should be called after successful initialization when termui's functionality isn't required anymore.
 func Close() {
-	close(done)
+	cancel()
 	tm.Close()
 }
 

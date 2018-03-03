@@ -122,17 +122,30 @@ type EvtMouse struct {
 type EvtErr error
 
 func hookTermboxEvt() {
+	tbevents := make(chan termbox.Event, 1)
+
+	go func() {
+		for {
+			tbevents <- termbox.PollEvent()
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				continue
+			}
+		}
+	}()
+
 	for {
 		select {
-		case <-done:
-			return
-		default:
-			e := termbox.PollEvent()
+		case e := <-tbevents:
 			for _, c := range sysEvtChs {
 				func(ch chan Event) {
 					ch <- crtTermboxEvt(e)
 				}(c)
 			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }
@@ -143,7 +156,7 @@ func NewSysEvtCh() chan Event {
 	return ec
 }
 
-var DefaultEvtStream = NewEvtStream()
+var DefaultEvtStream *EvtStream
 
 type EvtStream struct {
 	sync.RWMutex
@@ -198,11 +211,16 @@ func (es *EvtStream) Merge(name string, ec chan Event) {
 	es.srcMap[name] = ec
 
 	go func(a chan Event) {
-		for n := range a {
-			n.From = name
-			es.stream <- n
+		for {
+			select {
+			case <-ctx.Done():
+				es.wg.Done()
+				return
+			case n := <-a:
+				n.From = name
+				es.stream <- n
+			}
 		}
-		es.wg.Done()
 	}(ec)
 }
 
@@ -302,17 +320,20 @@ func NewTimerCh(du time.Duration) chan Event {
 		n := uint64(0)
 		for {
 			n++
-			time.Sleep(du)
-			e := Event{}
-			e.Type = "timer"
-			e.Path = "/timer/" + du.String()
-			e.Time = time.Now().Unix()
-			e.Data = EvtTimer{
-				Duration: du,
-				Count:    n,
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(du):
+				e := Event{}
+				e.Type = "timer"
+				e.Path = "/timer/" + du.String()
+				e.Time = time.Now().Unix()
+				e.Data = EvtTimer{
+					Duration: du,
+					Count:    n,
+				}
+				t <- e
 			}
-			t <- e
-
 		}
 	}(t)
 	return t
