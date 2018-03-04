@@ -7,7 +7,7 @@ package extra
 import (
 	"unicode/utf8"
 
-	. "github.com/gizak/termui"
+	. "github.com/bcicen/termui"
 )
 
 type Tab struct {
