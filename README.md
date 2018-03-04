@@ -2,7 +2,7 @@
 
 # termui
 
-Fork of [bcicen/termui](https://github.com/bcicen/termui) with the goal of improving event system, race conditions, internal cleanup of routines, as well as including common methods for interactive use and additional widgets
+Fork of [gizak/termui](https://github.com/gizak/termui) with the goal of improving event system, race conditions, internal cleanup of routines, as well as including common methods for interactive use and additional widgets
 
 ## Usage
 
