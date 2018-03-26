@@ -71,6 +71,24 @@ func evtKbd(e termbox.Event) EvtKbd {
 	return ek
 }
 
+func mouse_button_str(k termbox.Key) string {
+	switch k {
+	case termbox.MouseLeft:
+		return "left"
+	case termbox.MouseMiddle:
+		return "middle"
+	case termbox.MouseRight:
+		return "right"
+	case termbox.MouseRelease:
+		return "release"
+	case termbox.MouseWheelUp:
+		return "wheelup"
+	case termbox.MouseWheelDown:
+		return "wheeldown"
+	}
+	return "key"
+}
+
 func crtTermboxEvt(e termbox.Event) Event {
 	systypemap := map[termbox.EventType]string{
 		termbox.EventKey:       "keyboard",
@@ -102,7 +120,7 @@ func crtTermboxEvt(e termbox.Event) Event {
 		m := EvtMouse{}
 		m.X = e.MouseX
 		m.Y = e.MouseY
-		ne.Path = "/sys/mouse"
+		ne.Path = "/sys/mouse/" + mouse_button_str(e.Key)
 		ne.Data = m
 	}
 	return ne
